@@ -361,8 +361,10 @@ export function MessagesPage({onNavigate, targetMessageId}: MessagesPageProps) {
     const [nextMessages, nextReview] = await Promise.all([getMessages(), getMessageReview(selectedMessage.id)]);
     setMessages(nextMessages);
     setReviewDetail(nextReview);
-    if (selectedMessage.caseId) {
-      setSelectedCaseDetail(await getCaseDetail(selectedMessage.caseId));
+        if (selectedMessage.caseId) {
+      const nextDetail = await getCaseDetail(selectedMessage.caseId);
+      setSelectedCaseDetail(nextDetail);
+      setLastResult((current) => (current ? {...current, case: nextDetail.case, alerts: nextDetail.alerts} : current));
     }
   };
 

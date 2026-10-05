@@ -380,7 +380,7 @@ function buildSummary(input: {senderName: string; text: string; projectItem: str
   return `${parts.join('；')}。`;
 }
 
-function buildSuggestedReply(input: {clientName: string; text: string; intent: string; projectItem: string | null; quoteAmount: number | null; expectedDeadline: string | null; missingFields: string[]; similarCases?: RagExample[]}) {
+export function buildSuggestedReply(input: {clientName: string; text: string; intent: string; projectItem: string | null; quoteAmount: number | null; expectedDeadline: string | null; missingFields: string[]; similarCases?: RagExample[]}) {
   const bestExample = input.similarCases?.[0];
   const referenceText = bestExample ? `可參考過去「${bestExample.title}」案例的處理方式，` : '';
   const successText = bestExample?.successPattern ? `過去成功做法是：${bestExample.successPattern}` : '';
@@ -405,8 +405,10 @@ function buildSuggestedReply(input: {clientName: string; text: string; intent: s
       input.quoteAmount ? `預算約 NT$ ${input.quoteAmount.toLocaleString('zh-TW')}` : null,
       input.expectedDeadline ? `預期時間是 ${input.expectedDeadline}` : null,
     ].filter(Boolean).join('，');
-
-    return `您好，謝謝您的詢問。${knownParts ? `我目前理解 ${knownParts}。` : ''}${input.missingFields.length > 0 ? `想再確認 ${formatMissingFields(input.missingFields)}，` : ''}確認後我會整理報價與可執行範圍給您。${successText}`;
+        const rangeText = bestExample?.quoteRangeMin && bestExample.quoteRangeMax
+      ? `過去類似案件的報價範圍約 NT$ ${bestExample.quoteRangeMin.toLocaleString('zh-TW')}–${bestExample.quoteRangeMax.toLocaleString('zh-TW')}。`
+      : '';
+    return `您好，謝謝您的詢問。${knownParts ? `我目前理解 ${knownParts}。` : ''}${rangeText}${input.missingFields.length > 0 ? `想再確認 ${formatMissingFields(input.missingFields)}，` : ''}確認後我會整理報價與可執行範圍給您。${successText}`;
   }
 
   if (input.intent === '修改需求') {

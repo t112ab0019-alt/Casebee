@@ -1,7 +1,23 @@
 import type {AiExtraction, CaseRecord, MessageEvent, ThreadAwareExtractionResult, ThreadAwareField, ThreadFieldConflict} from '@casebee/shared';
 import {analyzeMessage} from './aiService.js';
+import {buildSuggestedReply} from './extractionService.js';
+import {findSimilarCases} from './ragService.js';
 
 const comparableFields: ThreadAwareField[] = ['clientName', 'projectItem', 'quoteAmount', 'expectedDeadline', 'submissionDeadline', 'publishDeadline'];
+
+
+const conflictFieldLabels: Partial<Record<ThreadAwareField, string>> = {projectItem: '專案項目', quoteAmount: '預算', expectedDeadline: '交期', submissionDeadline: '交稿期限', publishDeadline: '上線期限'};
+
+function formatConflictValue(field: ThreadAwareField, value: unknown) {
+  return field === 'quoteAmount' && typeof value === 'number' ? `NT$ ${value.toLocaleString('zh-TW')}` : String(value);
+}
+
+function buildConflictReply(conflicts: ThreadFieldConflict[]) {
+  const parts = conflicts
+    .map((conflict) => `${conflictFieldLabels[conflict.field] ?? conflict.field}調整為 ${formatConflictValue(conflict.field, conflict.extracted)}（原為 ${formatConflictValue(conflict.field, conflict.existing)}）`)
+    .join('、');
+  return `您好，收到。您提到${parts}。我先確認調整後的排程與報價是否可行，確認後回覆您。`;
+}
 
 function extractionFromCase(existingCase: CaseRecord): AiExtraction {
   return {
@@ -136,6 +152,15 @@ export async function analyzeThreadAwareMessage(input: {senderName: string; text
     ? `${currentExtraction.summary} Thread context: ${conflictingFields.length > 0 ? '偵測到與既有案件欄位衝突，需人工確認。' : '已沿用同一 Gmail thread 的既有案件資料。'}`
     : currentExtraction.summary;
 
+      if (input.existingCase) {
+    if (conflictingFields.length > 0) {
+      finalExtraction.suggestedReply = buildConflictReply(conflictingFields);
+    } else {
+      const similarCases = await findSimilarCases(finalExtraction);
+      finalExtraction.suggestedReply = buildSuggestedReply({clientName: finalExtraction.clientName ?? '', text: input.text, intent: currentExtraction.intent, projectItem: finalExtraction.projectItem, quoteAmount: finalExtraction.quoteAmount, expectedDeadline: finalExtraction.expectedDeadline, missingFields: finalExtraction.missingFields, similarCases});
+    }
+  }
+  
   const result: ThreadAwareExtractionResult = {
       extraction: finalExtraction,
       extractedFields,
