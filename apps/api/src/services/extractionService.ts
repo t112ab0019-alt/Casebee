@@ -348,7 +348,7 @@ function formatMissingFields(missingFields: string[]) {
   return missingFields.map((field) => missingFieldLabels[field] ?? field).join('、');
 }
 
-function buildSummary(input: {senderName: string; text: string; projectItem: string | null; quoteAmount: number | null; expectedDeadline: string | null; intent: string; missingFields: string[]; similarCases?: RagExample[]}) {
+export function buildSummary(input: {senderName: string; text: string; projectItem: string | null; quoteAmount: number | null; expectedDeadline: string | null; intent: string; missingFields: string[]; similarCases?: RagExample[]}) {
   const body = compactText(stripMailSubject(input.text));
   const parts = [`${input.senderName} 的訊息判斷為「${input.intent}」`];
   const bestExample = input.similarCases?.[0];

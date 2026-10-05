@@ -345,7 +345,7 @@ export function MessagesPage({onNavigate, targetMessageId}: MessagesPageProps) {
     setReanalyzeStatus('正在用新版擷取流程重新分析...');
     try {
       const result = await reanalyzeMessage(selectedMessage.id);
-      setLastResult(result.case ? result : null);
+      setLastResult(result.case ? {...result, alerts: result.caseDetail?.alerts ?? result.alerts} : null);
       setSelectedCaseDetail(result.caseDetail);
       setMessages(await getMessages());
       setReanalyzeStatus(`重新分析完成：${result.extraction.projectItem ?? '未擷取專案'}，模型 ${result.modelName}`);

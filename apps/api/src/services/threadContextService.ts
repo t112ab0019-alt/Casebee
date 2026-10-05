@@ -1,6 +1,6 @@
 import type {AiExtraction, CaseRecord, MessageEvent, ThreadAwareExtractionResult, ThreadAwareField, ThreadFieldConflict} from '@casebee/shared';
 import {analyzeMessage} from './aiService.js';
-import {buildSuggestedReply} from './extractionService.js';
+import {buildSuggestedReply, buildSummary} from './extractionService.js';
 import {findSimilarCases} from './ragService.js';
 
 const comparableFields: ThreadAwareField[] = ['clientName', 'projectItem', 'quoteAmount', 'expectedDeadline', 'submissionDeadline', 'publishDeadline'];
@@ -62,7 +62,7 @@ function mergeMissingFields(extraction: AiExtraction) {
   if (extraction.submissionDeadline) missing.delete('submission_deadline');
   if (extraction.publishDeadline) missing.delete('publish_deadline');
   if (extraction.nextAction) missing.delete('next_action');
-  if (extraction.requiredMaterials.length > 0) missing.delete('required_materials');
+  if (extraction.requiredMaterials.length > 0 || extraction.providedMaterials.length > 0) missing.delete('required_materials');
   return Array.from(missing);
 }
 
@@ -141,10 +141,18 @@ export async function analyzeThreadAwareMessage(input: {senderName: string; text
       finalExtraction.nextActionSource = existingExtraction.nextActionSource;
       inheritedFields.nextAction = existingExtraction.nextAction;
     }
+    if (currentExtraction.providedMaterials.length === 0 && existingExtraction.providedMaterials.length > 0) {
+      finalExtraction.providedMaterials = existingExtraction.providedMaterials;
+      inheritedFields.providedMaterials = existingExtraction.providedMaterials;
+    }
+    if (currentExtraction.intent === '一般訊息') {
+      finalExtraction.caseStatus = existingExtraction.caseStatus;
+    }
     if (currentExtraction.requiredMaterials.length === 0 && existingExtraction.requiredMaterials.length > 0) {
       finalExtraction.requiredMaterials = existingExtraction.requiredMaterials;
       inheritedFields.requiredMaterials = existingExtraction.requiredMaterials;
     }
+    
   }
 
   finalExtraction.missingFields = mergeMissingFields(finalExtraction);
@@ -152,15 +160,16 @@ export async function analyzeThreadAwareMessage(input: {senderName: string; text
     ? `${currentExtraction.summary} Thread context: ${conflictingFields.length > 0 ? '偵測到與既有案件欄位衝突，需人工確認。' : '已沿用同一 Gmail thread 的既有案件資料。'}`
     : currentExtraction.summary;
 
-      if (input.existingCase) {
-    if (conflictingFields.length > 0) {
+  if (input.existingCase) {
+    const similarCases = await findSimilarCases(finalExtraction);
+    finalExtraction.summary = `${buildSummary({senderName: finalExtraction.clientName ?? '', text: input.text, projectItem: finalExtraction.projectItem, quoteAmount: finalExtraction.quoteAmount, expectedDeadline: finalExtraction.expectedDeadline, intent: currentExtraction.intent, missingFields: finalExtraction.missingFields, similarCases})} Thread context: ${conflictingFields.length > 0 ? '偵測到與既有案件欄位衝突，需人工確認。' : '已沿用同一 Gmail thread 的既有案件資料。'}`;
+  if (conflictingFields.length > 0) {
       finalExtraction.suggestedReply = buildConflictReply(conflictingFields);
-    } else {
-      const similarCases = await findSimilarCases(finalExtraction);
+  }else {
       finalExtraction.suggestedReply = buildSuggestedReply({clientName: finalExtraction.clientName ?? '', text: input.text, intent: currentExtraction.intent, projectItem: finalExtraction.projectItem, quoteAmount: finalExtraction.quoteAmount, expectedDeadline: finalExtraction.expectedDeadline, missingFields: finalExtraction.missingFields, similarCases});
     }
   }
-  
+
   const result: ThreadAwareExtractionResult = {
       extraction: finalExtraction,
       extractedFields,
