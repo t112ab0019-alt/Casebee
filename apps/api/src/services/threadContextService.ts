@@ -14,7 +14,12 @@ function formatConflictValue(field: ThreadAwareField, value: unknown) {
 
 function buildConflictReply(conflicts: ThreadFieldConflict[]) {
   const parts = conflicts
-    .map((conflict) => `${conflictFieldLabels[conflict.field] ?? conflict.field}調整為 ${formatConflictValue(conflict.field, conflict.extracted)}（原為 ${formatConflictValue(conflict.field, conflict.existing)}）`)
+    .map((conflict) => {
+      if (conflict.field === 'projectItem' && conflict.reason === 'Customer wants to add a new item.') {
+        return `想新增項目，調整後專案內容為 ${conflict.extracted}`;
+      }
+      return `${conflictFieldLabels[conflict.field] ?? conflict.field}調整為 ${formatConflictValue(conflict.field, conflict.extracted)}（原為 ${formatConflictValue(conflict.field, conflict.existing)}）`;
+    })
     .join('、');
   return `您好，收到。您提到${parts}。我先確認調整後的排程與報價是否可行，確認後回覆您。`;
 }
@@ -126,7 +131,8 @@ export async function analyzeThreadAwareMessage(input: {senderName: string; text
     if (hasValue(currentValue) && hasValue(existingValue) && !compatibleValue(field, existingValue, currentValue)) {
       changedFields[field] = currentValue as never;
       if (field === 'projectItem' || field === 'quoteAmount' || field === 'expectedDeadline' || field === 'submissionDeadline' || field === 'publishDeadline') {
-        conflictingFields.push({field, existing: existingValue, extracted: currentValue, reason: 'Current message conflicts with existing case state.'});
+        const isAddition = field === 'projectItem' && /加做|新增|順便|另外|多做|再加|追加|也想/.test(input.text);
+        conflictingFields.push({field, existing: existingValue, extracted: isAddition ? `${existingValue} + ${currentValue}` : currentValue, reason: isAddition ? 'Customer wants to add a new item.' : 'Current message conflicts with existing case state.'});
         finalExtraction[field] = existingValue as never;
       }
     } else if (field === 'projectItem' && hasValue(currentValue) && hasValue(existingValue) && normalize(currentValue) !== normalize(existingValue)) {

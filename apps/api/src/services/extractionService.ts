@@ -253,7 +253,7 @@ function extractTypedDeadline(text: string, type: 'submission' | 'publish', rece
   const keywords = type === 'submission' ? '(?:交稿|初稿|腳本|素材|成品|修改稿|交件|交付|完稿|提交)' : '(?:上線|發布|貼文日|貼文上線|貼文發布|公開|活動開始|上架|刊登)';
   const before = text.match(new RegExp(`${datePattern}[^。；;，,\n]{0,16}${keywords}`));
   if (before?.[1]) return normalizeDateToken(before[1], receivedAt);
-  const after = text.match(new RegExp(`${keywords}[^。；;，,\n]{0,16}${datePattern}`));
+  const after = text.match(new RegExp(`${keywords}[^。；;，,\n]{0,16}?${datePattern}`));
   if (after?.[1]) return normalizeDateToken(after[1], receivedAt);
   return null;
 }
@@ -364,6 +364,7 @@ export function buildSummary(input: {senderName: string; text: string; projectIt
   if (input.expectedDeadline) {
     parts.push(`期限/時程：${input.expectedDeadline}`);
   }
+  
 
   if (input.missingFields.length > 0) {
     parts.push(`仍缺 ${formatMissingFields(input.missingFields)}`);
@@ -381,9 +382,8 @@ export function buildSummary(input: {senderName: string; text: string; projectIt
 }
 
 export function buildSuggestedReply(input: {clientName: string; text: string; intent: string; projectItem: string | null; quoteAmount: number | null; expectedDeadline: string | null; missingFields: string[]; similarCases?: RagExample[]}) {
-  const bestExample = input.similarCases?.[0];
-  const referenceText = bestExample ? `可參考過去「${bestExample.title}」案例的處理方式，` : '';
-  const successText = bestExample?.successPattern ? `過去成功做法是：${bestExample.successPattern}` : '';
+  const referenceText = '';
+  const successText = '';
   const projectText = input.projectItem ? `這次 ${input.projectItem} 的合作方向我有興趣` : '這次合作方向我有興趣';
   const deadlineText = input.expectedDeadline ? `我也先記下預計時程是 ${input.expectedDeadline}` : '';
 
@@ -405,10 +405,7 @@ export function buildSuggestedReply(input: {clientName: string; text: string; in
       input.quoteAmount ? `預算約 NT$ ${input.quoteAmount.toLocaleString('zh-TW')}` : null,
       input.expectedDeadline ? `預期時間是 ${input.expectedDeadline}` : null,
     ].filter(Boolean).join('，');
-        const rangeText = bestExample?.quoteRangeMin && bestExample.quoteRangeMax
-      ? `過去類似案件的報價範圍約 NT$ ${bestExample.quoteRangeMin.toLocaleString('zh-TW')}–${bestExample.quoteRangeMax.toLocaleString('zh-TW')}。`
-      : '';
-    return `您好，謝謝您的詢問。${knownParts ? `我目前理解 ${knownParts}。` : ''}${rangeText}${input.missingFields.length > 0 ? `想再確認 ${formatMissingFields(input.missingFields)}，` : ''}確認後我會整理報價與可執行範圍給您。${successText}`;
+        return `您好，謝謝您的詢問。${knownParts ? `我目前理解 ${knownParts}。` : ''}${input.missingFields.length > 0 ? `想再確認 ${formatMissingFields(input.missingFields)}，` : ''}確認後我會整理報價與可執行範圍給您。${successText}`;
   }
 
   if (input.intent === '修改需求') {
@@ -419,6 +416,10 @@ export function buildSuggestedReply(input: {clientName: string; text: string; in
         return `您好，收到。目前看起來可能會影響${input.expectedDeadline ? `${input.expectedDeadline} ` : ''}的交付安排。我會先依素材提供時間重新評估排程，確認是否需要調整交期後回覆您。`;
   }
 
+  if (input.intent === '確認合作') {
+    return `您好，感謝您確認合作！${input.projectItem ? `專案內容為 ${input.projectItem}，` : ''}${input.quoteAmount ? `報價確認為 NT$ ${input.quoteAmount.toLocaleString('zh-TW')}。` : ''}我會整理合約與付款方式（含訂金資訊）後提供給您，確認後即可開始安排進度。`;
+  }
+  
   if (input.missingFields.length > 0) {
     return `您好，謝謝您的訊息。${referenceText}為了協助評估後續安排，想先確認 ${formatMissingFields(input.missingFields)}，再整理合作方式給您。${successText}`;
   }
