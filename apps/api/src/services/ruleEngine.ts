@@ -42,7 +42,8 @@ function includesAny(text: string, keywords: string[]) {
 }
 
 function buildContext(caseRecord: CaseRecord, extraction: AiExtraction) {
-  return [caseRecord.title, caseRecord.summary, extraction.intent, extraction.summary, extraction.projectItem ?? '', extraction.expectedDeadline ?? ''].join(' ');
+  const stripSimilar = (text: string) => text.replace(/相似案例：[^；。]*[；。]?/g, '');
+  return [caseRecord.title, stripSimilar(caseRecord.summary ?? ''), extraction.intent, stripSimilar(extraction.summary ?? ''), extraction.projectItem ?? '', extraction.expectedDeadline ?? ''].join(' ');
 }
 
 export async function runRules(caseRecord: CaseRecord, extraction: AiExtraction): Promise<Alert[]> {
