@@ -168,7 +168,7 @@ export async function analyzeThreadAwareMessage(input: {senderName: string; text
 
   if (input.existingCase) {
     const similarCases = await findSimilarCases(finalExtraction);
-    finalExtraction.summary = `${buildSummary({senderName: finalExtraction.clientName ?? '', text: input.text, projectItem: finalExtraction.projectItem, quoteAmount: finalExtraction.quoteAmount, expectedDeadline: finalExtraction.expectedDeadline, intent: currentExtraction.intent, missingFields: finalExtraction.missingFields, similarCases})} Thread context: ${conflictingFields.length > 0 ? '偵測到與既有案件欄位衝突，需人工確認。' : '已沿用同一 Gmail thread 的既有案件資料。'}`;
+    finalExtraction.summary = `${buildSummary({senderName: finalExtraction.clientName ?? '', text: input.text, projectItem: finalExtraction.projectItem, quoteAmount: finalExtraction.quoteAmount, expectedDeadline: finalExtraction.expectedDeadline, intent: currentExtraction.intent, missingFields: finalExtraction.missingFields, similarCases})} 最新訊息：「${input.text.replace(/\s+/g, ' ').slice(0, 80)}」 Thread context: ${conflictingFields.length > 0 ? '偵測到與既有案件欄位衝突，需人工確認。' : '已沿用同一 Gmail thread 的既有案件資料。'}`;
   if (conflictingFields.length > 0) {
       finalExtraction.suggestedReply = buildConflictReply(conflictingFields);
   }else {

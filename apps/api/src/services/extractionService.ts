@@ -382,6 +382,7 @@ export function buildSummary(input: {senderName: string; text: string; projectIt
 }
 
 export function buildSuggestedReply(input: {clientName: string; text: string; intent: string; projectItem: string | null; quoteAmount: number | null; expectedDeadline: string | null; missingFields: string[]; similarCases?: RagExample[]}) {
+  const bestExample = input.similarCases?.[0];
   const referenceText = '';
   const successText = '';
   const projectText = input.projectItem ? `這次 ${input.projectItem} 的合作方向我有興趣` : '這次合作方向我有興趣';
@@ -405,7 +406,12 @@ export function buildSuggestedReply(input: {clientName: string; text: string; in
       input.quoteAmount ? `預算約 NT$ ${input.quoteAmount.toLocaleString('zh-TW')}` : null,
       input.expectedDeadline ? `預期時間是 ${input.expectedDeadline}` : null,
     ].filter(Boolean).join('，');
-        return `您好，謝謝您的詢問。${knownParts ? `我目前理解 ${knownParts}。` : ''}${input.missingFields.length > 0 ? `想再確認 ${formatMissingFields(input.missingFields)}，` : ''}確認後我會整理報價與可執行範圍給您。${successText}`;
+
+    const rangeText = bestExample && bestExample.score >= 40 && bestExample.quoteRangeMin && bestExample.quoteRangeMax
+  ? `依類似專案的經驗，報價範圍約 NT$ ${bestExample.quoteRangeMin.toLocaleString('zh-TW')}–${bestExample.quoteRangeMax.toLocaleString('zh-TW')}。`
+  : '';
+
+        return `您好，謝謝您的詢問。${knownParts ? `我目前理解 ${knownParts}。` : ''}${rangeText}${input.missingFields.length > 0 ? `想再確認 ${formatMissingFields(input.missingFields)}，` : ''}確認後我會整理報價與可執行範圍給您。${successText}`;
   }
 
   if (input.intent === '修改需求') {
@@ -419,7 +425,11 @@ export function buildSuggestedReply(input: {clientName: string; text: string; in
   if (input.intent === '確認合作') {
     return `您好，感謝您確認合作！${input.projectItem ? `專案內容為 ${input.projectItem}，` : ''}${input.quoteAmount ? `報價確認為 NT$ ${input.quoteAmount.toLocaleString('zh-TW')}。` : ''}我會整理合約與付款方式（含訂金資訊）後提供給您，確認後即可開始安排進度。`;
   }
-  
+
+  if (/匯款|已轉帳|已付款|付款完成|已匯|匯入/.test(input.text)) {
+    return '您好，收到您的訂金匯款，謝謝！我會先核對入帳狀況，確認後即安排製作，並同步更新時程給您。';
+  }
+
   if (input.missingFields.length > 0) {
     return `您好，謝謝您的訊息。${referenceText}為了協助評估後續安排，想先確認 ${formatMissingFields(input.missingFields)}，再整理合作方式給您。${successText}`;
   }
