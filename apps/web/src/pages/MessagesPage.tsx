@@ -187,6 +187,30 @@ export function MessagesPage({onNavigate, targetMessageId}: MessagesPageProps) {
 
   const selectedTaxId = selectedMessage?.text.match(/\b\d{8}\b/)?.[0];
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+const refreshAll = async () => {
+  setIsRefreshing(true);
+  try {
+    const latest = await getMessages();
+    setMessages(latest);
+    setLastResult(null);
+    const current = latest.find((message) => message.id === selectedMessage?.id) ?? selectedMessage ?? latest[0];
+    if (current?.caseId) {
+      setSelectedCaseDetail(await getCaseDetail(current.caseId));
+    }
+    if (current) {
+      const [detail, history] = await Promise.all([getMessageReview(current.id), getMessageReplyStatusHistory(current.id)]);
+      setReviewDetail(detail);
+      setReplyStatusHistory(history);
+    }
+  } catch {
+    // 失敗時保留目前畫面
+  } finally {
+    setIsRefreshing(false);
+  }
+};
+
   useEffect(() => {
     if (!selectedMessage?.caseId) {
       setSelectedCaseDetail(null);
@@ -438,6 +462,9 @@ export function MessagesPage({onNavigate, targetMessageId}: MessagesPageProps) {
               <p>{filteredMessages.length} 則訊息</p>
             </div>
             <span>即時</span>
+            <button type="button" className="messages-filter-tabs__button" onClick={refreshAll} disabled={isRefreshing}>
+    {isRefreshing ? '更新中...' : '重新整理'}
+  </button>
           </div>
 
           <div className="messages-filter-tabs" role="tablist" aria-label="訊息平台篩選">
