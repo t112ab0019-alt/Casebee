@@ -545,11 +545,11 @@ const refreshAll = async () => {
               ) : null}
               <div className="entity-grid">
                 <span>客戶名稱</span><strong>{visibleExtraction.clientName ?? '未擷取'}</strong>
-                <span>專案項目</span><strong>{visibleExtraction.projectItem ?? '未擷取'}</strong>
-                <span>預算 / 報價金額</span><strong>{visibleExtraction.quoteAmount ? `$${visibleExtraction.quoteAmount.toLocaleString()}` : '未擷取'}</strong>
-                <span>預期到期時間</span><strong>{visibleExtraction.expectedDeadline ?? '未擷取'}</strong>
+                <span>專案項目</span><strong>{visibleCase?.projectItem ?? visibleExtraction.projectItem ?? '未擷取'}</strong>
+                <span>預算 / 報價金額</span><strong>{(visibleCase?.quoteAmount ?? visibleExtraction.quoteAmount) ? `$${(visibleCase?.quoteAmount ?? visibleExtraction.quoteAmount)!.toLocaleString()}` : '未擷取'}</strong>
+                <span>預期到期時間</span><strong>{visibleCase?.expectedDeadline ?? visibleExtraction.expectedDeadline ?? '未擷取'}</strong>
                 <span>需求目的</span><strong>{visibleExtraction.intent}</strong>
-                <span>案件狀態</span><strong>{visibleExtraction.caseStatus}</strong>
+                <span>案件狀態</span><strong>{visibleCase?.status ?? visibleExtraction.caseStatus}</strong>
                 <span>缺少資料</span><strong>{visibleExtraction.missingFields.length > 0 ? visibleExtraction.missingFields.map(formatField).join('、') : '無'}</strong>
               </div>
               <span className="analysis-label">案件摘要</span>
